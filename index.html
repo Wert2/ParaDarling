@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>San Valentín Eterno</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background: radial-gradient(circle, #25000a 0%, #000000 100%); font-family: 'Dancing Script', cursive; touch-action: none; }
+        #ui { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 100; }
+        #hint { color: #ff0055; font-size: 2.2rem; text-shadow: 0 0 20px #ff0040, 0 0 40px #ff1493; animation: pulse 1.5s infinite; pointer-events: auto; cursor: pointer; text-align: center; }
+        #final-card { background: rgba(10, 0, 5, 0.95); padding: 25px; border-radius: 40px; border: 3px double #ff1493; display: none; box-shadow: 0 0 50px rgba(255, 20, 147, 0.7); width: 80%; max-width: 300px; height: 55vh; backdrop-filter: blur(20px); text-align: center; pointer-events: auto; }
+        #writer { font-size: 1.3rem; line-height: 1.4; color: #fff; text-shadow: 0 0 10px #ff1493; margin-top: 10px; overflow-y: auto; max-height: 75%; }
+        h1 { color: #ff69b4; font-size: 2.4rem; margin: 0; text-shadow: 0 0 20px #ff1493; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div id="hint">✨ TOCA PARA LA MAGIA ✨</div>
+        <div id="final-card">
+            <h1>Para Ti...</h1>
+            <p id="writer"></p>
+        </div>
+    </div>
+
+    <audio id="musica" loop preload="auto"><source src="musica.mp3" type="audio/mpeg"></audio>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "gsap": "https://cdn.skypack.dev/gsap" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { gsap } from 'gsap';
+
+        let scene, camera, renderer, heart, stars, kitties = [], heartRain = [];
+        const loader = new THREE.TextureLoader();
+
+        init();
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.z = 30; // Un poco más lejos para que quepan las fotos en móvil
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.body.appendChild(renderer.domElement);
+
+            createGlowHeart();
+            createDecorations();
+            setupLights();
+
+            window.addEventListener('pointerdown', startMagic, { once: true });
+            animate();
+        }
+
+        function getHeartShape() {
+            const shape = new THREE.Shape();
+            const x = -0.25, y = -0.5;
+            shape.moveTo(x + 0.25, y + 0.25);
+            shape.bezierCurveTo(x + 0.25, y + 0.25, x + 0.2, y, x, y);
+            shape.bezierCurveTo(x - 0.3, y, x - 0.3, y + 0.35, x - 0.3, y + 0.35);
+            shape.bezierCurveTo(x - 0.3, y + 0.55, x - 0.15, y + 0.77, x + 0.25, y + 0.95);
+            shape.bezierCurveTo(x + 0.6, y + 0.77, x + 0.8, y + 0.55, x + 0.8, y + 0.35);
+            shape.bezierCurveTo(x + 0.8, y + 0.35, x + 0.8, y, x + 0.5, y);
+            shape.bezierCurveTo(x + 0.35, y, x + 0.25, y + 0.25, x + 0.25, y + 0.25);
+            return shape;
+        }
+
+        function createGlowHeart() {
+            const geo = new THREE.ExtrudeGeometry(getHeartShape(), { depth: 0.8, bevelEnabled: true, bevelSize: 0.2 });
+            const mat = new THREE.MeshPhongMaterial({ color: 0xff0040, emissive: 0xff1493, emissiveIntensity: 0.8 });
+            heart = new THREE.Mesh(geo, mat);
+            heart.rotation.z = Math.PI;
+            heart.scale.set(10, 10, 10);
+            scene.add(heart);
+        }
+
+        function createKittyPro() {
+            const group = new THREE.Group();
+            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), whiteMat);
+            head.scale.set(1.3, 0.95, 0.9);
+            group.add(head);
+            const earGeo = new THREE.ConeGeometry(0.35, 0.7, 32);
+            const earL = new THREE.Mesh(earGeo, whiteMat);
+            earL.position.set(-0.7, 0.8, 0); earL.rotation.z = 0.3;
+            const earR = earL.clone(); earR.position.set(0.7, 0.8, 0); earR.rotation.z = -0.3;
+            group.add(earL, earR);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), eyeMat);
+            eyeL.position.set(-0.45, 0.1, 0.85); eyeL.scale.y = 1.3;
+            const eyeR = eyeL.clone(); eyeR.position.set(0.45, 0.1, 0.85);
+            group.add(eyeL, eyeR);
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
+            nose.position.set(0, -0.1, 0.9);
+            group.add(nose);
+            const hShape = getHeartShape();
+            const hGeo = new THREE.ShapeGeometry(hShape);
+            const ribbon = new THREE.Mesh(hGeo, new THREE.MeshBasicMaterial({ color: 0xff0040 }));
+            ribbon.position.set(0.7, 0.7, 0.7);
+            ribbon.rotation.z = Math.PI;
+            ribbon.scale.set(0.4, 0.4, 0.4);
+            group.add(ribbon);
+            return group;
+        }
+
+        function createDecorations() {
+            const starGeo = new THREE.BufferGeometry();
+            const starPos = [];
+            for(let i=0; i<800; i++) starPos.push((Math.random()-0.5)*160, (Math.random()-0.5)*160, (Math.random()-0.5)*160);
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+            stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.15 }));
+            scene.add(stars);
+        }
+
+        function setupLights() {
+            scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+            const p = new THREE.PointLight(0xff1493, 150); p.position.set(0, 10, 20);
+            scene.add(p);
+        }
+
+        async function startMagic() {
+            const audio = document.getElementById('musica');
+            audio.play().catch(() => {});
+            document.getElementById('hint').style.display = 'none';
+
+            gsap.to(heart.scale, { x: 60, y: 60, z: 60, duration: 0.8, ease: "power4.in" });
+            gsap.to(heart.material, { opacity: 0, transparent: true, duration: 0.8, onComplete: () => {
+                scene.remove(heart);
+                for(let i=0; i<250; i++) {
+                    const p = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({color:0xff1493}));
+                    scene.add(p);
+                    gsap.to(p.position, { 
+                        x:(Math.random()-0.5)*100, y:(Math.random()-0.5)*100, z:(Math.random()-0.5)*100, 
+                        duration:3, ease:"power2.out", onComplete: ()=>scene.remove(p)
+                    });
+                }
+            }});
+
+            await new Promise(r => setTimeout(r, 1000));
+
+            for(let i=0; i<4; i++) {
+                const k = createKittyPro();
+                k.position.set((i - 1.5) * 8, -18, -10);
+                k.scale.set(3, 3, 3);
+                scene.add(k);
+                kitties.push(k);
+            }
+
+            // COORDENADAS SIMÉTRICAS PARA MÓVIL (2 columnas x 5 filas)
+            const coords = [
+                [-6, 20], [6, 20],   // Fila 1 (arriba)
+                [-6, 10], [6, 10],   // Fila 2
+                [-6, 0],  [6, 0],    // Fila 3 (centro)
+                [-6, -10],[6, -10],  // Fila 4
+                [-6, -20],[6, -20]   // Fila 5 (abajo)
+            ];
+
+            for(let i=0; i < 10; i++) {
+                dropPhoto(i+1, coords[i][0], coords[i][1]);
+                await new Promise(r => setTimeout(r, 7000)); 
+            }
+            showFinalCard();
+        }
+
+        function dropPhoto(id, tx, ty) {
+            loader.load(`img${id}.png`, (tex) => {
+                const aspect = tex.image.width / tex.image.height;
+                let w = 9, h = 9; // Un poco más grandes para móvil
+                if(aspect > 1) h = 9 / aspect; else w = 9 * aspect;
+
+                const photo = new THREE.Mesh(
+                    new THREE.PlaneGeometry(w, h), 
+                    new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0 })
+                );
+                photo.position.set(0, 0, 15);
+                scene.add(photo);
+                
+                const tl = gsap.timeline();
+                tl.to(photo.material, { opacity: 1, duration: 1 })
+                  .to({}, { duration: 5 }) 
+                  .to(photo.position, { x: tx, y: ty, z: -5, duration: 2, ease: "power2.inOut" })
+                  .to(photo.scale, { x: 0.5, y: 0.5, duration: 2 }, "-=2");
+            }, undefined, (err) => console.error("Error cargando img"+id, err));
+        }
+
+        function showFinalCard() {
+            const card = document.getElementById('final-card');
+            card.style.display = 'block';
+            gsap.from(card, { opacity: 0, y: 100, duration: 2 });
+            const msg = `Hoy no es un día de etiquetas, sino de sentimientos reales. Gracias por haber sido parte de mi historia y por seguir estando presente hoy. Aprecio profundamente la persona que eres y el apoyo que siempre me has brindado. Hay personas que dejan una huella imborrable sin importar el tiempo, y tú eres una de ellas. Gracias por tu luz, por tu paciencia y por seguir caminando a mi lado. Deseo que tu vida esté siempre llena de ese brillo que tú entregas a los demás. Algun dia me gustaria conocer a esa persona que tanto quiero ¡Feliz San Valentín <3!
+`;
+            let i = 0;
+            const type = () => {
+                if(i < msg.length) {
+                    document.getElementById('writer').innerHTML += msg.charAt(i);
+                    i++; setTimeout(type, 50);
+                    card.scrollTop = card.scrollHeight;
+                }
+            };
+            type();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(heart) heart.rotation.y += 0.025; 
+            stars.rotation.y += 0.0003;
+            kitties.forEach(k => k.rotation.y += 0.02);
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
